@@ -6,7 +6,7 @@ AI agents that *execute* — sending, publishing, submitting, spending — need 
 
 HashBound closes that hole:
 
-1. **Queue time:** every gated action is snapshotted and bound to `SHA-256(tool + args + context)` (canonical JSON, key-order independent).
+1. **Queue time:** every gated action is snapshotted and bound to `SHA-256(tool + args + context)` (canonical JSON, sorted keys, UTF-8). Amounts are bound as exact decimal strings — which is why shifting an approved `100.00` to an attempted `10000.00` changes the hash and is caught, not rounded away. This implements the control named in OWASP AISVS requirement 9.2.2 (hash the action parameters at approval time, validate before execution); hash-pinning itself is established practice — the contribution is where it is bound, who re-checks it, and the field-level diff produced when the check fails.
 2. **Approve time:** the queued payload is re-hashed. Any in-place mutation voids the approval (`voided_tamper`) with an approved-vs-attempted field diff.
 3. **Execute time:** the separate Executor re-hashes the payload it is about to run and refuses — `DENY — TAMPER` — unless it matches an approved entry's bound hash. An approval can never be spent on a different payload.
 4. **No verdict cache, anywhere.** Every verdict is computed fresh for the exact payload in front of the gate. (This rule is a direct response to a real audit finding: a reviewer whose writable verdict cache returned stored accepts verbatim, letting one payload's verdict be replayed onto another.)
@@ -124,6 +124,7 @@ Any team deploying agents that act in the world — operations fleets, support a
 - Docker on one VM is an *isolated sandbox*, not verified containment; the README claims isolation, never proof against a determined sandbox escape.
 - SHA-256 proves a payload (or a fetched page) is byte-identical to what was approved/captured — it does not prove the content is true.
 - Hackathon scope: single-operator approval queue, no multi-user auth.
+- The receipts hash chain detects *rewriting* of history, but not truncation, forking, or split-view of the ledger. Signed checkpoints / external anchoring of the chain head are roadmap, not shipped. Roadmap #1: Ed25519-signed approvals with a WebAuthn/passkey step-up and offline executor verification; also roadmap: M-of-N multi-approver quorums and Slack/Teams approval UX.
 
 ## Provenance & licence
 
